@@ -44,9 +44,26 @@ class MyApp extends HookWidget {
               ? const CircularProgressIndicator()
               : snapshot.hasError
                   ? Text('Some issue ${snapshot.error}')
-                  : snapshot.hasData
-                      ? Text('${snapshot.data}')
-                      : const Text('No data...'),
+                  : FutureBuilder(
+                      future: getImages(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          final images = snapshot.data!;
+                          return ListView(
+                            children: images
+                                .map(
+                                  (img) => ListTile(
+                                    title: Text(img.author!),
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        } else {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                      },
+                    ),
         ),
       ),
     );
