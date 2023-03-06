@@ -12,41 +12,46 @@ void main() {
 class MyApp extends HookWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  Future<List<Images>?> getImages() async {
-    http.Response response;
-
-    try {
-      response = await http.get(Uri.parse("https://picsum.photos/v2/list"));
-    } on Exception catch (_) {
-      return null;
-    }
-
-    if (response.statusCode == 200) {
-      final images = (jsonDecode(response.body) as List)
-          .map((img) => Images.fromJson(img))
-          .toList();
-
-      return images;
-    } else {
-      return [];
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final futureImages = useMemoized(getImages);
-    final snapshot = useFuture(futureImages);
+    // ignore: omit_local_variable_types
+    final ValueNotifier<List<Images>> imagesList = useState([]);
+
+    Future<List<Images>> getImages() async {
+      final response =
+          await http.get(Uri.parse("https://picsum.photos/v2/list"));
+
+      if (response.statusCode == 200) {
+        final images = (jsonDecode(response.body) as List)
+            .map((img) => Images.fromJson(img))
+            .toList();
+
+        imagesList.value = images;
+
+        return imagesList.value;
+      } else {
+        return [];
+      }
+    }
+
+    useEffect(() {
+      final result = getImages();
+      return () {
+        // ignore: unnecessary_statements
+        result;
+      };
+    }, []);
 
     return MaterialApp(
       home: Scaffold(
-        body: Center(
-          child: snapshot.connectionState == ConnectionState.waiting
-              ? const CircularProgressIndicator()
-              : snapshot.hasError
-                  ? Text('Some issue ${snapshot.error}')
-                  : snapshot.hasData
-                      ? Text('${snapshot.data}')
-                      : const Text('No data...'),
+        body: ListView(
+          shrinkWrap: true,
+          children: imagesList.value.map((image) {
+            return ListTile(
+              title: Text(image.author!),
+              subtitle: Text(image.url!),
+            );
+          }).toList(),
         ),
       ),
     );
